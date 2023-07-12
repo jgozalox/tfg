@@ -7,3 +7,9 @@ Grado: Ingenieria en sistemas audiovisuales y multimedia (Escuela de ingenieria 
 
 El repositorio actual recoge el código del modelo de aprendizaje automático desarrollado como Trabajo Final de Grado.
 A partir de la Prueba 1, solo se incluyen las modificaciones del código, especificandose a que clase impactan. 
+
+De las 43 pruebas totales, no en todas se realiza una modificación del código, ya que el cambio puede deberse a los conjuntos de datos utilizados.
+
+  
+
+
