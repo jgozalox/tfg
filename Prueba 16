@@ -1,0 +1,42 @@
+CAMBIOS EN MAIN B
+
+emotion_map = {'happy': 0, 'sad': 1, 'angry': 2}
+# Cargar los datos de entrenamiento y prueba
+train_dataset = pd.read_csv('train_dataset_sample_rate_bajado_6.csv')
+train_dataset = train_dataset.drop(train_dataset[train_dataset['labels']=='neutral'].index)
+train_dataset = train_dataset.drop(train_dataset[train_dataset['labels']=='calm'].index)
+train_dataset = train_dataset.drop(train_dataset[train_dataset['labels']=='fear'].index)
+train_dataset = train_dataset.drop(train_dataset[train_dataset['labels']=='disgust'].index)
+train_dataset = train_dataset.drop(train_dataset[train_dataset['labels']=='surprise'].index)
+train_dataset = train_dataset.drop(train_dataset[train_dataset['labels']=='unknown'].index)
+
+x_train = train_dataset.iloc[:, :-1].values
+y_train = train_dataset['labels'].replace(emotion_map)
+print('Shape of training data:', train_dataset.shape)
+
+test_dataset = pd.read_csv('test_dataset_sample_rate_bajado_6.csv')
+test_dataset = test_dataset.drop(test_dataset[test_dataset['labels']=='neutral'].index)
+test_dataset = test_dataset.drop(test_dataset[test_dataset['labels']=='calm'].index)
+test_dataset = test_dataset.drop(test_dataset[test_dataset['labels']=='fear'].index)
+test_dataset = test_dataset.drop(test_dataset[test_dataset['labels']=='disgust'].index)
+test_dataset = test_dataset.drop(test_dataset[test_dataset['labels']=='surprise'].index)
+test_dataset = test_dataset.drop(test_dataset[test_dataset['labels']=='unknown'].index)
+
+
+model = Sequential()
+
+model.add(Conv2D(256, kernel_size=(5, 1), strides=(1, 1), padding='same', activation='relu', input_shape=(x_train.shape[1], x_train.shape[2], x_train.shape[3])))
+model.add(MaxPooling2D(pool_size=(5, 1), strides=(2, 1), padding='same'))
+
+model.add(Conv2D(128, kernel_size=(5, 1), strides=(1, 1), padding='same', activation='relu'))
+model.add(MaxPooling2D(pool_size=(5, 1), strides=(2, 1), padding='same'))
+model.add(Dropout(0.2))
+
+model.add(Conv2D(64, kernel_size=(5, 1), strides=(1, 1), padding='same', activation='relu'))
+model.add(MaxPooling2D(pool_size=(5, 1), strides=(2, 1), padding='same'))
+
+model.add(Flatten())
+model.add(Dense(units=32, activation='relu'))
+model.add(Dropout(0.3))
+
+model.add(Dense(units=3, activation='softmax'))
