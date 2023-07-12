@@ -10,6 +10,6 @@ A partir de la Prueba 1, solo se incluyen las modificaciones del código, especi
 
 De las 43 pruebas totales, no en todas se realiza una modificación del código, ya que el cambio puede deberse a los conjuntos de datos utilizados.
 
-  
+Toda la información subida a este repositorio se encuentra disponible en el archivo "Registro de pruebas. Emociones audibles..xlsx"
 
 
