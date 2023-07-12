@@ -1,0 +1,101 @@
+CAMBIOS EN MAIN B
+
+import os
+import numpy as np
+import pandas as pd
+import librosa
+from matplotlib import pyplot as plt
+from scipy.stats import stats
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.model_selection import StratifiedKFold
+from keras.models import Sequential
+from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from keras.optimizers import Adam
+import tensorflow.keras as kerasm
+
+# Definir el diccionario de mapeo
+emotion_map = {'happy': 0, 'sad': 1, 'angry': 2}
+
+# Cargar los datos
+dataset = pd.read_csv('train_dataset2222.csv')
+dataset = dataset.drop(dataset[dataset['labels'] == 'neutral'].index)
+dataset = dataset.drop(dataset[dataset['labels'] == 'calm'].index)
+dataset = dataset.drop(dataset[dataset['labels'] == 'fear'].index)
+dataset = dataset.drop(dataset[dataset['labels'] == 'disgust'].index)
+dataset = dataset.drop(dataset[dataset['labels'] == 'surprise'].index)
+dataset = dataset.drop(dataset[dataset['labels'] == 'unknown'].index)
+
+x = dataset.iloc[:, :-1].values
+y = dataset['labels'].replace(emotion_map)
+
+# Selecciona todas las columnas excepto la última
+cols_to_normalize = dataset.columns[:-1]
+# Normalización Z-score
+scaler = MinMaxScaler()
+dataset[cols_to_normalize] = stats.zscore(dataset[cols_to_normalize], axis=0)
+
+# Reformatear la entrada
+x = np.expand_dims(x, axis=2)
+x = np.expand_dims(x, axis=3)
+
+print("x shape:", x.shape)
+print("y shape:", y.shape)
+
+# Definir el número de folds para la validación cruzada
+k = 5
+
+# Crear los índices para la validación cruzada estratificada k-fold
+skf = StratifiedKFold(n_splits=k, shuffle=True)
+
+# Listas para almacenar los resultados de cada fold
+accuracy_scores = []
+loss_scores = []
+
+# Bucle de entrenamiento y evaluación de los folds
+for train_index, val_index in skf.split(x, y):
+    # Dividir los datos en conjuntos de entrenamiento y validación
+    x_train, x_val = x[train_index], x[val_index]
+    y_train, y_val = y[train_index], y[val_index]
+
+    # Construir el modelo
+    model = Sequential()
+    model.add(Conv2D(256, kernel_size=(5, 1), strides=(1, 1), padding='same', activation='relu',
+                     input_shape=(x_train.shape[1], x_train.shape[2], x_train.shape[3])))
+    model.add(MaxPooling2D(pool_size=(5, 1), strides=(2, 1), padding='same'))
+    model.add(Conv2D(128, kernel_size=(5, 1), strides=(1, 1), padding='same', activation='relu'))
+    model.add(MaxPooling2D(pool_size=(5, 1), strides=(2, 1), padding='same'))
+    model.add(Dropout(0.2))
+    model.add(Conv2D(64, kernel_size=(5, 1), strides=(1, 1), padding='same', activation='relu'))
+    model.add(Flatten())
+    model.add(Dense(units=32, activation='relu'))
+    model.add(Dropout(0.3))
+    model.add(Dense(units=3, activation='softmax'))
+
+    # Compilar el modelo
+    optimiser = kerasm.optimizers.Adam(learning_rate=0.0001)
+    model.compile(optimizer=optimiser, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+    model.summary()
+
+    # Entrenar el modelo
+    history = model.fit(x_train, y_train, validation_data=(x_val, y_val), batch_size=32, epochs=50, verbose=0)
+
+    # Evaluar el modelo en el conjunto de validación
+    loss, accuracy = model.evaluate(x_val, y_val, verbose=0)
+
+    # Almacenar los resultados
+    accuracy_scores.append(accuracy)
+    loss_scores.append(loss)
+
+mean_accuracy = np.mean(accuracy_scores)
+mean_loss = np.mean(loss_scores)
+
+print("Mean Accuracy: {:.2f}%".format(mean_accuracy * 100))
+print("Mean Loss: {:.4f}".format(mean_loss))
+
+plt.plot(history.history['accuracy'], label='train')
+plt.plot(history.history['val_accuracy'], label='val')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.show()
