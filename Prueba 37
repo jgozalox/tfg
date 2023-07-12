@@ -1,0 +1,37 @@
+CAMBIO EN PROCESADO
+
+def get_features(path, duration=2.5, offset=0.6, shift_amount=1000):
+    # duration and offset are used to take care of the no audio in start and the ending of each audio files as seen above.
+    data, sample_rate = librosa.load(path, duration=duration, offset= offset)
+
+    # without augmentation
+    res1 = extract_features(data, sample_rate)
+    result = np.array(res1)
+
+    # data with noise
+    noise_data = add_noise(data)
+    res2 = extract_features(noise_data, sample_rate)
+    result = np.vstack((result, res2))  # stacking vertically
+
+    # data with pitching
+    pitched_data = pitch(data, sample_rate)
+    res3 = extract_features(pitched_data, sample_rate)
+    result = np.vstack((result, res3))  # stacking vertically
+
+    # data with pitching and white_noise
+    new_data = pitch(data, sample_rate)
+    data_noise_pitch = add_noise(new_data)
+    res3 = extract_features(data_noise_pitch, sample_rate)
+    result = np.vstack((result, res3))  # stacking vertically
+
+    # data with shifting
+    shifted_data = np.roll(data, shift_amount)  # Example shift amount, adjust as needed
+    res4 = extract_features(shifted_data, sample_rate)
+    result = np.vstack((result, res4))  # stacking vertically
+
+    # data with time stretching
+    stretched_data = librosa.effects.time_stretch(data, rate=0.8)  # Example time stretch rate, adjust as needed
+    res5 = extract_features(stretched_data, sample_rate)
+    result = np.vstack((result, res5))  # stacking vertically
+
+    return result
