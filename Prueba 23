@@ -1,0 +1,6 @@
+CAMBIOS EN MAIN B
+
+cols_to_normalize = test_dataset.columns[:-1]
+# Normalización MinMax
+scaler = MinMaxScaler()
+test_dataset[cols_to_normalize] = scaler.fit_transform(test_dataset[cols_to_normalize])
