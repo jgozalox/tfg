@@ -1,0 +1,85 @@
+CAMBIOS EN MAIN B
+
+import os
+import numpy as np
+import pandas as pd
+import librosa
+from matplotlib import pyplot as plt
+from sklearn.preprocessing import StandardScaler
+from keras.models import Sequential
+from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from keras.optimizers import Adam
+import tensorflow.keras as kerasm
+
+# Definir el diccionario de mapeo
+emotion_map = {'happy': 0, 'sad': 1, 'angry': 2}
+
+# Cargar los datos de entrenamiento y prueba
+train_dataset = pd.read_csv('train_dataset_sample_rate_bajado_6.csv')
+train_dataset = train_dataset.drop(train_dataset[train_dataset['labels'] == 'neutral'].index)
+train_dataset = train_dataset.drop(train_dataset[train_dataset['labels'] == 'calm'].index)
+train_dataset = train_dataset.drop(train_dataset[train_dataset['labels'] == 'fear'].index)
+train_dataset = train_dataset.drop(train_dataset[train_dataset['labels'] == 'disgust'].index)
+train_dataset = train_dataset.drop(train_dataset[train_dataset['labels'] == 'surprise'].index)
+train_dataset = train_dataset.drop(train_dataset[train_dataset['labels'] == 'unknown'].index)
+
+x_train = train_dataset.iloc[:, :-1].values
+y_train = train_dataset['labels'].replace(emotion_map)
+print('Shape of training data:', train_dataset.shape)
+
+test_dataset = pd.read_csv('test_dataset_sample_rate_bajado_6.csv')
+test_dataset = test_dataset.drop(test_dataset[test_dataset['labels'] == 'neutral'].index)
+test_dataset = test_dataset.drop(test_dataset[test_dataset['labels'] == 'calm'].index)
+test_dataset = test_dataset.drop(test_dataset[test_dataset['labels'] == 'fear'].index)
+test_dataset = test_dataset.drop(test_dataset[test_dataset['labels'] == 'disgust'].index)
+test_dataset = test_dataset.drop(test_dataset[test_dataset['labels'] == 'surprise'].index)
+test_dataset = test_dataset.drop(test_dataset[test_dataset['labels'] == 'unknown'].index)
+
+x_test = test_dataset.iloc[:, :-1].values
+y_test = test_dataset['labels'].replace(emotion_map)
+print('Shape of testing data:', test_dataset.shape)
+
+# Normalización Z-score
+scaler = StandardScaler()
+x_train = scaler.fit_transform(x_train)
+x_test = scaler.transform(x_test)
+
+# Reformatear la entrada
+x_train = np.expand_dims(x_train, axis=2)
+x_test = np.expand_dims(x_test, axis=2)
+
+model = Sequential()
+
+model.add(Conv2D(256, kernel_size=(5, 1), strides=(1, 1), padding='same', activation='relu',
+                 input_shape=(x_train.shape[1], x_train.shape[2], 1)))
+model.add(MaxPooling2D(pool_size=(5, 1), strides=(2, 1), padding='same'))
+
+model.add(Conv2D(128, kernel_size=(5, 1), strides=(1, 1), padding='same', activation='relu'))
+model.add(MaxPooling2D(pool_size=(5, 1), strides=(2, 1), padding='same'))
+model.add(Dropout(0.2))
+
+model.add(Conv2D(64, kernel_size=(5, 1), strides=(1, 1), padding='same', activation='relu'))
+model.add(MaxPooling2D(pool_size=(5, 1), strides=(2, 1), padding='same'))
+
+model.add(Flatten())
+model.add(Dense(units=32, activation='relu'))
+model.add(Dropout(0.3))
+
+model.add(Dense(units=3, activation='softmax'))
+
+
+# Compilar el modelo
+optimiser = kerasm.optimizers.Adam(learning_rate=0.0001)
+model.compile(optimizer=optimiser, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+model.summary()
+
+# train model
+history = model.fit(x_train, y_train, validation_data=(x_test, y_test), batch_size=32, epochs=150)
+
+plt.plot(history.history['accuracy'], label='train')
+plt.plot(history.history['val_accuracy'], label='test')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.show()
