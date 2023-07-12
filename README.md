@@ -1,4 +1,4 @@
-![image](https://github.com/jgozalox/tfg/assets/78902259/6b57154e-4fe2-4c11-8ed8-51e7ca6e64aa)# TFG
+# TFG
 El repositorio actual recoge el código del modelo de aprendizaje automático desarrollado como Trabajo Final de Grado del alumno
 A partir de la Prueba 1, solo se incluyen las modificaciones del código, especificandose a que clase impactan. 
 
