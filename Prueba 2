@@ -1,0 +1,17 @@
+CAMBIOS EN MAIN B
+
+from keras import regularizers
+
+model = keras.Sequential([
+
+    keras.layers.Dense(512, input_shape=(x_train.shape[1],), activation='relu',
+                       kernel_regularizer=regularizers.l2(0.01)),
+
+    keras.layers.Dense(512, activation='relu', kernel_regularizer=regularizers.l2(0.01)),
+
+    keras.layers.Dense(256, activation='relu', kernel_regularizer=regularizers.l2(0.01)),
+
+    keras.layers.Dense(64, activation='relu', kernel_regularizer=regularizers.l2(0.01)),
+
+    keras.layers.Dense(8, activation='softmax')
+])
