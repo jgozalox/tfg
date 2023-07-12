@@ -1,0 +1,32 @@
+CAMBIOS EN MAIN B
+
+from tensorflow.keras.layers import Conv2D, MaxPooling2D
+
+# Reformatear la entrada
+x_train = np.expand_dims(x_train, axis=2)
+x_train = np.expand_dims(x_train, axis=3)
+
+x_test = np.expand_dims(x_test, axis=2)
+x_test = np.expand_dims(x_test, axis=3)
+
+# build network topology
+model = Sequential()
+
+model.add(Conv2D(256, kernel_size=(5, 1), strides=(1, 1), padding='same', activation='relu', input_shape=(x_train.shape[1], x_train.shape[2], x_train.shape[3])))
+model.add(MaxPooling2D(pool_size=(5, 1), strides=(2, 1), padding='same'))
+
+model.add(Conv2D(256, kernel_size=(5, 1), strides=(1, 1), padding='same', activation='relu'))
+model.add(MaxPooling2D(pool_size=(5, 1), strides=(2, 1), padding='same'))
+
+model.add(Conv2D(128, kernel_size=(5, 1), strides=(1, 1), padding='same', activation='relu'))
+model.add(MaxPooling2D(pool_size=(5, 1), strides=(2, 1), padding='same'))
+model.add(Dropout(0.2))
+
+model.add(Conv2D(64, kernel_size=(5, 1), strides=(1, 1), padding='same', activation='relu'))
+model.add(MaxPooling2D(pool_size=(5, 1), strides=(2, 1), padding='same'))
+
+model.add(Flatten())
+model.add(Dense(units=32, activation='relu'))
+model.add(Dropout(0.3))
+
+model.add(Dense(units=6, activation='softmax'))
