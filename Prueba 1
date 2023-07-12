@@ -1,1 +1,344 @@
+MAIN A
 
+from sklearn.model_selection import train_test_split
+from preprocesado_datos import *
+from procesado import *
+
+#Separador del correspondiente SO
+separador = os.path.sep
+dir_superior = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+#Rutas a los conjuntos de datos (carpeta superior)
+#dataset_p = "C:\\Users\\javier.gozalo\\PycharmProjects\\dataset\\"
+
+RAVDESS_p = "RAVDESS\\"
+CREMA_p = "CREMA-D\\ HYPERLINK "file://audiowav//" HYPERLINK "file://audiowav//" HYPERLINK "file://audiowav//"AudioWAV HYPERLINK "file://audiowav//" HYPERLINK "file://audiowav//" HYPERLINK "file://audiowav//"\\"
+TESS_p = "TESS\\ HYPERLINK "file://tess%2520toronto%2520emotional%2520speech%2520set%2520data//" HYPERLINK "file://tess%20toronto%20emotional%20speech%20set%20data//" HYPERLINK "file://tess%2520toronto%2520emotional%2520speech%2520set%2520data//"tess toronto emotional speech set data HYPERLINK "file://tess%2520toronto%2520emotional%2520speech%2520set%2520data//" HYPERLINK "file://tess%20toronto%20emotional%20speech%20set%20data//" HYPERLINK "file://tess%2520toronto%2520emotional%2520speech%2520set%2520data//"\\"
+SAVEE_p = "SAVEE\\ HYPERLINK "file://all//" HYPERLINK "file://all//" HYPERLINK "file://all//"ALL HYPERLINK "file://all//" HYPERLINK "file://all//" HYPERLINK "file://all//"\\"
+
+RAVDESS_p = dir_superior + separador + RAVDESS_p
+CREMA_p =  dir_superior + separador + CREMA_p
+TESS_p =  dir_superior + separador + TESS_p
+SAVEE_p =  dir_superior + separador + SAVEE_p
+
+
+RAVDESS_df = prepare_dataset_RAVDESS(RAVDESS_p)
+CREMA_df = prepare_dataset_CREMA(CREMA_p)
+TESS_df = prepare_dataset_TESS(TESS_p)
+SAVEE_df = prepare_dataset_SAVEE(SAVEE_p)
+
+#CONCATENACION DFs
+df_tot = pd.concat([RAVDESS_df, CREMA_df, TESS_df, SAVEE_df], axis=0)
+
+#plt.title('Numero de muestras por emocion', size=16)
+#sns.displot(emotion_path_T, x='Emotions')
+#plt.ylabel('Numero', size=12)
+#plt.xlabel('Emocion', size=12)
+#sns.despine(top=True, right=True, left=False, bottom=False)
+#plt.show()
+print("Numero de muestras totales [{}]".format(df_tot.shape[0]))
+
+X = df_tot['Path'].values
+y = df_tot['Emotions'].values
+
+# Se dividen las muestras en conjuntos de entrenamiento y prueba (si se diera overfitting, añadiremos validacion)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Se imprime la forma de cada conjunto
+print("Muestras de entrenamiento:", X_train.shape[0])
+print("Muestras de prueba:", X_test.shape[0])
+
+# Creamos csv con datos de entrenamiento
+train_dataset_df = pd.DataFrame()
+train_dataset_df.name  = "train_dataset"
+train_dataset_df['Path'] = X_train
+train_dataset_df['Emotions'] = y_train
+
+print(train_dataset_df)
+
+# Creamos csv con datos de prueba
+test_dataset_df = pd.DataFrame()
+test_dataset_df.name = "test_dataset"
+test_dataset_df['Path'] = X_test
+test_dataset_df['Emotions'] = y_test
+
+print(test_dataset_df)
+
+generar_csv(train_dataset_df)
+generar_csv(test_dataset_df)
+
+
+PROCESADO
+
+import json
+
+import numpy as np
+import librosa  # librosa is a Python library for analyzing audio and music. It can be used to extract the data from the audio files we will see it later.
+import librosa.display
+import pandas as pd
+
+n_fft = 2048
+hop_length = 512
+
+#calcula la amplitud del ruido multiplicando un factor de escala por un número aleatorio entre 0 y 1 y la amplitud máxima de los datos.
+def add_noise(data):
+    rate = np.random.random() * 0.075  # threshold o limite en 0.075
+    noise_amp = rate * np.random.uniform() * np.amax(data)
+    return (data + (noise_amp * np.random.normal(size=data.shape[0])))
+
+
+# Estirar la señal (devuelve un nuevo arreglo de datos donde los valores se han desplazado por un número aleatorio de posiciones dentro del rango de -5000 a 5000.)
+def stretch(data, rate=0.75):
+    return librosa.effects.time_stretch(data, rate)
+
+# Desplazar en tiempo
+def shift(data, rate = 1000):
+    shift_range = int(np.random.uniform(low=-5, high=5) * rate)
+    return np.roll(data, shift_range)
+
+# Desplazar en frecuencia
+def pitch(data, sampling_rate, pitch_factor=0.7):
+    pitch_factor = np.random.random() * pitch_factor
+    return librosa.effects.pitch_shift(data, sampling_rate, pitch_factor)
+
+
+def chunks(data, frame_length, hop_length):
+    for i in range(0, len(data), hop_length):
+        yield data[i:i+frame_length]
+
+# Zero Crossing Rate
+def zcr(data, frame_length=2048, hop_length=512):
+    zcr = librosa.feature.zero_crossing_rate(y=data, frame_length=frame_length, hop_length=hop_length)
+    return np.squeeze(zcr)
+
+def rmse(data, frame_length=2048, hop_length=512):
+    rmse = librosa.feature.rms(y=data, frame_length=frame_length, hop_length=hop_length)
+    return np.squeeze(rmse)
+
+def mfcc(data, sr, frame_length=2048, hop_length=512, flatten: bool = True):
+    mfcc_feature = librosa.feature.mfcc(y=data, sr=sr)
+    return np.squeeze(mfcc_feature.T) if not flatten else np.ravel(mfcc_feature.T)
+
+#Esta función toma como entrada una señal de audio, "data", junto con la longitud de trama deseada "frame_length" y el tamaño de paso deseado "hop_length". Luego, en un bucle "for", itera sobre la señal de audio en incrementos de tamaño "hop_length" y, en cada iteración, devuelve un subconjunto de la señal de audio de longitud "frame_length". Esto se hace mediante el uso de la palabra clave "yield", que devuelve un valor y luego pausa la función, lo que permite que se continúe la iteración en el bucle "for" en la próxima llamada a la función. De esta manera, la función devuelve una secuencia de fragmentos de la señal de audio, cada uno de longitud "frame_length" y desplazado en "hop_length" muestras en relación al fragmento anterior.
+
+def extract_features(data, sample_rate):
+    # ZCR
+    result = np.array([])
+    zcr = np.mean(librosa.feature.zero_crossing_rate(y=data).T, axis=0)
+    result = np.hstack((result, zcr))  # stacking horizontally
+
+    # Chroma_stft
+    stft = np.abs(librosa.stft(data))
+    chroma_stft = np.mean(librosa.feature.chroma_stft(S=stft, sr=sample_rate).T, axis=0)
+    result = np.hstack((result, chroma_stft))  # stacking horizontally
+
+    # MFCC
+    mfcc = np.mean(librosa.feature.mfcc(y=data, sr=sample_rate).T, axis=0)
+    result = np.hstack((result, mfcc))  # stacking horizontally
+
+    # Root Mean Square Value
+    rms = np.mean(librosa.feature.rms(y=data).T, axis=0)
+    result = np.hstack((result, rms))  # stacking horizontally
+
+    # MelSpectogram
+    mel = np.mean(librosa.feature.melspectrogram(y=data, sr=sample_rate).T, axis=0)
+    result = np.hstack((result, mel))  # stacking horizontally
+
+    return result
+
+def get_features(path, duration=2.5, offset=0.6):
+    # duration and offset are used to take care of the no audio in start and the ending of each audio files as seen above.
+    data, sample_rate = librosa.load(path, duration=duration, offset= offset)
+
+    # without augmentation
+    res1 = extract_features(data, sample_rate)
+    result = np.array(res1)
+
+    # data with noise
+    noise_data = add_noise(data)
+    res2 = extract_features(noise_data, sample_rate)
+    result = np.vstack((result, res2))  # stacking vertically
+
+    # data with pitching
+    pitched_data = pitch(data, sample_rate)
+    res3 = extract_features(pitched_data, sample_rate)
+    result = np.vstack((result, res3))  # stacking vertically
+
+    # data with pitching and white_noise
+    new_data = pitch(data, sample_rate)
+    data_noise_pitch = add_noise(new_data)
+    res3 = extract_features(data_noise_pitch, sample_rate)
+    result = np.vstack((result, res3))  # stacking vertically
+
+    return result
+
+def generar_csv(df):
+    X, Y = [], []
+    total_reg = df.shape[0]
+    for path, emotion, i in zip(df.Path, df.Emotions, range(total_reg)):
+        features = get_features(path)
+        print("Extrayendo caracteristicas... [{}/{}] ({})".format(i,total_reg,str(df.name)))
+        for f in features:
+            X.append(f)
+            # appending emotion 3 times as we have made 3 augmentation 0020techniques on each audio file.
+            Y.append(emotion)
+
+    Features = pd.DataFrame(X)
+    print(Features)
+    Features['labels'] = Y
+    csv_name = str(df.name) + ".csv"
+    Features.to_csv(csv_name, index=False)
+    print("El fichero {} se ha generado correctamente".format(csv_name))
+
+
+PREPROCESADO DATOS
+
+import os
+import pandas as pd
+
+
+def prepare_dataset_RAVDESS(path):
+    emotions_a, paths_a = [], []
+    for dir in os.listdir(path):
+        for file in os.listdir(path + dir):
+            emotion_num = int(file.split('.')[0].split('-')[2])
+            emotions_a.append(emotion_num)
+            paths_a.append(path + dir + '/' + file)
+
+    RAVDESS_df = pd.DataFrame({'Emotions': emotions_a, 'Path': paths_a})
+
+    # changing integers to actual emotions.
+    RAVDESS_df.Emotions.replace(
+        {1: 'neutral',
+         2: 'calm',
+         3: 'happy',
+         4: 'sad',
+         5: 'angry',
+         6: 'fear',
+         7: 'disgust',
+         8: 'surprise'},
+        inplace=True)
+
+    return RAVDESS_df
+
+
+def prepare_dataset_CREMA(path):
+    emotions_a, paths_a = [], []
+    for file in os.listdir(path):
+        paths_a.append(path + file)
+        emotion = file.split('_')[2]
+        if emotion == 'SAD':
+            emotions_a.append('sad')
+        elif emotion == 'ANG':
+            emotions_a.append('angry')
+        elif emotion == 'DIS':
+            emotions_a.append('disgust')
+        elif emotion == 'FEA':
+            emotions_a.append('fear')
+        elif emotion == 'HAP':
+            emotions_a.append('happy')
+        elif emotion == 'NEU':
+            emotions_a.append('neutral')
+        else:
+            emotions_a.append('Desconocido')
+
+    return pd.DataFrame({'Emotions': emotions_a, 'Path': paths_a})
+
+
+def prepare_dataset_TESS(path):
+    emotions_a, paths_a = [], []
+    for dir in os.listdir(path):
+        for file in os.listdir(path + dir):
+            part = file.split('.')[0].split('_')[2]
+            if part == 'ps':
+                emotions_a.append('surprise')
+            else:
+                emotions_a.append(part)
+            paths_a.append(path + dir + '/' + file)
+
+    return pd.DataFrame({'Emotions': emotions_a, 'Path': paths_a})
+
+
+def prepare_dataset_SAVEE(path):
+    emotions_a, paths_a = [], []
+    for file in os.listdir(path):
+        paths_a.append(path + file)
+        emotion_let = file.split('_')[1][:-6]  # (contar con .wav)
+        if emotion_let == 'a':
+            emotions_a.append('angry')
+        elif emotion_let == 'd':
+            emotions_a.append('disgust')
+        elif emotion_let == 'f':
+            emotions_a.append('fear')
+        elif emotion_let == 'h':
+            emotions_a.append('happy')
+        elif emotion_let == 'n':
+            emotions_a.append('neutral')
+        elif emotion_let == 'sa':
+            emotions_a.append('sad')
+        else:
+            emotions_a.append('surprise')
+
+    return pd.DataFrame({'Emotions': emotions_a, 'Path': paths_a})
+
+
+
+MAIN B
+
+import os
+import numpy as np
+import pandas as pd
+import librosa
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from keras.models import Sequential
+from keras.layers import Conv1D, MaxPooling1D, Flatten, Dense, Dropout
+from keras.utils import np_utils
+from keras.optimizers import Adam
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+import tensorflow.keras as keras
+
+# Definir el diccionario de mapeo
+emotion_map = {'angry': 0, 'disgust': 1, 'fear': 2, 'happy': 3, 'neutral': 4, 'sad': 5, 'surprise': 6, 'calm': 7}
+
+# Cargar los datos de entrenamiento y prueba
+train_dataset = pd.read_csv('train_dataset.csv')
+x_train = train_dataset.iloc[:, :-1].values
+y_train = train_dataset['labels'].replace(emotion_map)
+print('Shape of training data:', train_dataset.shape)
+
+test_dataset = pd.read_csv('test_dataset.csv')
+x_test = test_dataset.iloc[:, :-1].values
+y_test = test_dataset['labels'].replace(emotion_map)
+print('Shape of testing data:', test_dataset.shape)
+
+
+# build network topology
+model = keras.Sequential([
+
+    # input layer
+    keras.layers.Dense(512, input_shape=(x_train.shape[1],), activation='relu'),
+
+    # 1st dense layer
+    keras.layers.Dense(512, activation='relu'),
+
+    # 2nd dense layer
+    keras.layers.Dense(256, activation='relu'),
+
+    # 3rd dense layer
+    keras.layers.Dense(64, activation='relu'),
+
+    # output layer
+    keras.layers.Dense(8, activation='softmax')
+])
+
+# compile model
+optimiser = keras.optimizers.Adam(learning_rate=0.0001)
+model.compile(optimizer=optimiser,
+              loss='sparse_categorical_crossentropy',
+              metrics=['accuracy'])
+
+model.summary()
+
+# train model
+history = model.fit(x_train, y_train, validation_data=(x_test, y_test), batch_size=32, epochs=150)
