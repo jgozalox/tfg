@@ -1,0 +1,19 @@
+CAMBIOS EN MAIN B
+
+# build network topology
+model = keras.Sequential([
+
+    keras.layers.Dense(512, input_shape=(x_train.shape[1],), activation='relu'),
+    keras.layers.Dropout(0.5),
+
+    keras.layers.Dense(512, activation='relu'),
+    keras.layers.Dropout(0.5),
+
+    keras.layers.Dense(256, activation='relu'),
+    keras.layers.Dropout(0.5),
+
+    keras.layers.Dense(64, activation='relu'),
+    keras.layers.Dropout(0.5),
+
+    keras.layers.Dense(8, activation='softmax')
+])
