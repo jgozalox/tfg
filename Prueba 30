@@ -1,0 +1,5 @@
+CAMBIOS EN PROCESADO
+
+# LPCC
+lpcc = librosa.lpc(y=data, order=12)
+result = np.hstack((result, lpcc))
