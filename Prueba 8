@@ -1,0 +1,15 @@
+CAMBIOS EN MAIN B
+
+# build network topology
+model = Sequential()
+
+model.add(Conv2D(256, kernel_size=(5, 1), strides=(1, 1), padding='same', activation='relu', input_shape=(x_train.shape[1], x_train.shape[2], x_train.shape[3])))
+
+model.add(Conv2D(128, kernel_size=(5, 1), strides=(1, 1), padding='same', activation='relu'))
+
+model.add(Conv2D(64, kernel_size=(5, 1), strides=(1, 1), padding='same', activation='relu'))
+
+model.add(Flatten())
+model.add(Dense(units=32, activation='relu'))
+
+model.add(Dense(units=6, activation='softmax'))
